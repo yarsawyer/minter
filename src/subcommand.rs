@@ -1,3 +1,5 @@
+use self::minter::Minter;
+
 use super::*;
 pub mod wallet;
 
@@ -15,9 +17,9 @@ pub(crate) enum Subcommand {
 }
 
 impl Subcommand {
-	pub(crate) fn run(self, options: Options) -> Result {
+	pub(crate) fn run(self, options: Options, state: Arc<Minter>) -> Result {
 		match self {      
-			Self::Wallet(wallet) => wallet.run(options),
+			Self::Wallet(wallet) => wallet.run(options, state),
 		}
 	}
 }

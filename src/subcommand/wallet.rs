@@ -1,5 +1,7 @@
 use bitcoin::{secp256k1::SecretKey, PrivateKey};
 
+use self::{minter::Minter, receive::ReceiveArgs};
+
 use {
 	super::*,
 	bitcoin::secp256k1::{
@@ -32,7 +34,7 @@ pub(crate) enum Wallet {
 	//#[clap(about = "List wallet inscriptions")]
 	//Inscriptions,
 	#[clap(about = "Generate receive address")]
-	Receive,
+	Receive(ReceiveArgs),
 //   #[clap(about = "Restore wallet")]
 //   Restore(restore::Restore),
 	//#[clap(about = "Send sat or inscription")]
@@ -44,15 +46,15 @@ pub(crate) enum Wallet {
 }
 
 impl Wallet {
-	pub(crate) fn run(self, options: Options) -> Result<()> {
+	pub(crate) fn run(self, options: Options, state: Arc<Minter>) -> Result<()> {
 		//let rt = runtime::Runtime::new().map_err(|e| Error::msg(e.to_string()))?;
 
 		match self {
 			Self::Balance => balance::run(options),
-			Self::Create(create) => create.run(options),
+			Self::Create(create) => create.run(options, state),
 			//Self::Inscribe(inscribe) => inscribe.run(options),
 			//Self::Inscriptions => inscriptions::run(options),
-			Self::Receive => receive::run(options),
+			Self::Receive(args) => receive::run(options, state, args),
 			//Self::Restore(restore) => restore.run(options),
 			//Self::Send(send) => send.run(options),
 			//Self::Transactions(transactions) => transactions.run(options),

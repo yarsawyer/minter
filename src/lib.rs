@@ -1,11 +1,12 @@
 use data::db::Database;
+use minter::Minter;
 
 use {
 		self::{
 			arguments::Arguments,
 			subcommand::Subcommand,
 			options::Options,
-			config::WalletConfig,
+			// config::WalletConfig,
 		},    
 		bip39::Mnemonic,
 		anyhow::{anyhow, bail, Context, Error},
@@ -51,6 +52,7 @@ pub mod options;
 pub mod subcommand;
 
 pub mod data;
+pub mod minter;
 
 
 type Result<T = (), E = Error> = std::result::Result<T, E>;
@@ -67,8 +69,11 @@ const INTERRUPT_LIMIT: u64 = 5;
 fn quick_test() {
 	let db_path = "./db";
 	let db = Database::open(db_path).unwrap();
-	db.set(&"test", &42).unwrap();
-	dbg!(db.get::<i32>(&"test"));
+	for x in db.iterate(&"addr").unwrap() {
+		dbg!(x);
+	}
+	// db.set(&"test", &42).unwrap();
+	// dbg!(db.get::<i32>(&"test"));
 }
 	
 pub fn main() {
@@ -87,8 +92,8 @@ pub fn main() {
 
 		logger.init();
 }
-	quick_test();
-	return;
+	// quick_test();
+	// return;
 	
 	ctrlc::set_handler(move || {
 	
@@ -101,8 +106,11 @@ pub fn main() {
 		}
 	})
 	.expect("Error setting ctrl-c handler");
+
+	let db_path = "./db";
+	let minter = Minter::new(db_path).unwrap();
 	
-	if let Err(err) = Arguments::parse().run() {
+	if let Err(err) = Arguments::parse().run(minter) {
 		eprintln!("error: {err}");
 		err
 			.chain()

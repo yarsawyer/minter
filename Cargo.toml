@@ -18,11 +18,16 @@ dirs = "5.0.1"
 env_logger = "0.10.1"
 hex = "0.4.3"
 reqwest = { version = "0.11.23", features = ["json", "blocking"] }
+rocksdb = { version = "0.21.0", features = ["multi-threaded-cf"] }
 serde = {version = "1.0.195", features = ["derive"]}
 serde_json = "1.0.111"
 serde_yaml = "0.9.30"
 tokio = { version = "1.35.1", features = ["full"] }
 
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+indicatif = "0.17.7"
+tracing-indicatif = "0.3.6"
 
 [[bin]]
 name = "minter"

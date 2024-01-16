@@ -1,3 +1,5 @@
+use data::db::Database;
+
 use {
     self::{
       arguments::Arguments,
@@ -48,6 +50,8 @@ mod config;
 pub mod options;
 pub mod subcommand;
 
+pub mod data;
+
 
 type Result<T = (), E = Error> = std::result::Result<T, E>;
 
@@ -59,9 +63,44 @@ fn timestamp(seconds: u32) -> DateTime<Utc> {
 }
   
   const INTERRUPT_LIMIT: u64 = 5;
+
+fn quick_test() {
+
+  let db_path = "./db";
+  let db = Database::open(db_path).unwrap();
+  db.set(&"test", &42).unwrap();
+  dbg!(db.get::<i32>(&"test"));
+}
   
 pub fn main() {
-  env_logger::init();
+  {
+    // use crate::util::log::{AndFilter, NotFilter};
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+    use tracing_subscriber::*;
+    //better_panic::install();
+    let indicatif_layer = tracing_indicatif::IndicatifLayer::new();
+    // let verbosity = match m.occurrences_of("verbosity") {
+    //     0 => "error",
+    //     1 => "warn",
+    //     2 => "info",
+    //     3 => "debug",
+    //     _ => "trace",
+    // };
+    let verbosity = "trace";
+    let fmt_layer_a = fmt::layer()
+        .with_writer(indicatif_layer.get_stderr_writer())
+        .with_filter(EnvFilter::new(verbosity));
+    let logger = registry()
+        // .with(fmt_layer_b)
+        .with(fmt_layer_a)
+        .with(indicatif_layer);
+
+    logger.init();
+}
+  quick_test();
+  return;
+  //env_logger::init();
   
   ctrlc::set_handler(move || {
   

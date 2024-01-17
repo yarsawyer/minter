@@ -58,12 +58,10 @@ pub(crate) fn run(_options: crate::subcommand::Options, state: Arc<Minter>, args
 
     let address = bitcoin::Address::p2pkh(&bitcoin_public_key, bitcoin::Network::Bitcoin);
 
-    state.push_important(format!("Created new address for {:?} with private: {:?} and public: {}", &args.ty, &derived_key.private_key, &address));
-
-    state.db.set(format!("A/{address}").as_bytes(), &WalletAddressData {
+    state.push_address(&address.to_string(), &WalletAddressData {
         private: derived_key.private_key,
         ty: args.ty,
-    }).context("Failed to save address")?;
+    })?;
 
     print_json(Output {
         address,

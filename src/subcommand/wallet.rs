@@ -19,6 +19,8 @@ pub mod balance;
 pub mod create;
 pub mod restore;
 pub mod receive;
+pub mod transactions;
+pub mod list_utxo;
 
 
 
@@ -35,12 +37,15 @@ pub(crate) enum Wallet {
 	//Inscriptions,
 	#[clap(about = "Generate receive address")]
 	Receive(ReceiveArgs),
+	
+	#[clap(about = "Get utxo's of address")]
+	ListUtxo(list_utxo::ListUtxo),
 //   #[clap(about = "Restore wallet")]
 //   Restore(restore::Restore),
 	//#[clap(about = "Send sat or inscription")]
 	//Send(send::Send),
-	//#[clap(about = "See wallet transactions")]
-	//Transactions(transactions::Transactions),
+	// #[clap(about = "See wallet transactions")]
+	// Transactions(transactions::Transactions),
 	//#[clap(about = "List wallet outputs")]
 	//Outputs,
 }
@@ -57,7 +62,7 @@ impl Wallet {
 			Self::Receive(args) => receive::run(options, state, args),
 			//Self::Restore(restore) => restore.run(options),
 			//Self::Send(send) => send.run(options),
-			//Self::Transactions(transactions) => transactions.run(options),
+			Self::ListUtxo(args) => args.run(options, state).await,
 			//Self::Outputs => outputs::run(options),
 		}
 	}

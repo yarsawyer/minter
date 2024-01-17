@@ -1,7 +1,6 @@
 use std::{path::Path, fmt::Debug, sync::Arc};
 
 use anyhow::Context;
-use rocksdb::DBAccess;
 use tracing::{info, trace};
 
 pub struct Database {

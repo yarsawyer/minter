@@ -22,6 +22,7 @@ pub mod receive;
 pub mod transactions;
 pub mod list_utxo;
 pub mod util_commands;
+pub mod send;
 
 
 
@@ -48,6 +49,8 @@ pub(crate) enum Wallet {
 	RemoveAddress(util_commands::RemoveAddress),
 	#[clap(about = "List addresses")]
 	ListAddresses(util_commands::ListAddresses),
+	#[clap(about = "Send")]
+	Send(send::Send),
 //   #[clap(about = "Restore wallet")]
 //   Restore(restore::Restore),
 	//#[clap(about = "Send sat or inscription")]
@@ -74,6 +77,7 @@ impl Wallet {
 			Self::AddAddress(args) => args.run(options, state).await,
 			Self::RemoveAddress(args) => args.run(options, state).await,
 			Self::ListAddresses(args) => args.run(options, state).await,
+			Self::Send(args) => args.run(options, state).await,
 			//Self::Outputs => outputs::run(options),
 		}
 	}

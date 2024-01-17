@@ -23,7 +23,7 @@ pub struct AddAddress {
 
 impl AddAddress {
     pub async fn run(self, _: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
-        let private = self.private.as_deref().map(|x| SecretKey::from_str(x)).transpose().context("Invalid private address")?;
+        let private = self.private.as_deref().map(SecretKey::from_str).transpose().context("Invalid private address")?;
         state.push_address(&self.address.to_string(), &WalletAddressData {
             private,
             ty: self.ty,

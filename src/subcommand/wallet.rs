@@ -46,11 +46,11 @@ pub(crate) enum Wallet {
 }
 
 impl Wallet {
-	pub(crate) fn run(self, options: Options, state: Arc<Minter>) -> Result<()> {
+	pub(crate) async fn run(self, options: Options, state: Arc<Minter>) -> Result<()> {
 		//let rt = runtime::Runtime::new().map_err(|e| Error::msg(e.to_string()))?;
 
 		match self {
-			Self::Balance => balance::run(options),
+			Self::Balance => balance::run(options, state).await,
 			Self::Create(create) => create.run(options, state),
 			//Self::Inscribe(inscribe) => inscribe.run(options),
 			//Self::Inscriptions => inscriptions::run(options),

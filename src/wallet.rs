@@ -1,15 +1,17 @@
-// #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, clap::ValueEnum)]
-// pub enum AddressType {
-// 	#[clap(name = "utxo")]
-// 	Utxo,
-// 	#[clap(name = "ord")]
-// 	Inscription,
-// }
+use bitcoin::secp256k1::SecretKey;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, clap::ValueEnum)]
+pub enum AddressType {
+	#[clap(name = "utxo")]
+	Utxo,
+	#[clap(name = "ord")]
+	Ord,
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct WalletAddress {
-	pub(crate) private: String,
-	// pub ty: AddressType,
+pub struct WalletAddressData {
+	pub(crate) private: SecretKey,
+	pub ty: AddressType,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

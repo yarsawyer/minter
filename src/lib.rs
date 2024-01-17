@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use data::db::Database;
 use minter::Minter;
 
@@ -67,22 +69,84 @@ fn timestamp(seconds: u32) -> DateTime<Utc> {
 const INTERRUPT_LIMIT: u64 = 5;
 
 fn quick_test() {
-	let db_path = "./db";
-	let db = Database::open(db_path).unwrap();
-	for x in db.iterate(&"addr").unwrap() {
-		dbg!(x);
-	}
-	// db.set(&"test", &42).unwrap();
-	// dbg!(db.get::<i32>(&"test"));
+	// let db_path = "./db";
+	// let db = Database::open(db_path).unwrap();
+
+	// let start = Instant::now();
+
+	// for i in 0..1_000_000 {
+	// 	db.set(&("test/shit/", i), &()).unwrap();
+	// 	db.set(&("test/crap/", i), &()).unwrap();
+	// 	db.set(&("test/crab/", i), &()).unwrap();
+	// }
+
+	// println!("A: {} ms", start.elapsed().as_millis());
+	// let start = Instant::now();
+
+	// // for i in 0..1_000_000 {
+	// // 	db.get::<()>(&("test/shit/", i)).unwrap();
+	// // }
+
+	// println!("B: {} ms", start.elapsed().as_millis());
+	// let start = Instant::now();
+
+	// let mut i = 0;
+	// for _ in db.iterate(&("test/shit/").unwrap() {
+	// 	i += 1;
+	// }
+	// dbg!(i);
+
+	// println!("C: {} ms", start.elapsed().as_millis());
+	// let start = Instant::now();
+
+
+	// let mut h0 = HashMap::new();
+	// let mut h1 = HashMap::new();
+	// let mut h2 = HashMap::new();
+	// for i in 0..5 {
+	// 	h0.insert(i, 44);
+	// 	h1.insert(i, 44);
+	// 	h2.insert(i, 44);
+	// }
+	
+	// let v0: Vec<_> = h0.keys().collect();
+	// let v1: Vec<_> = h1.keys().collect();
+	// let v2: Vec<_> = h2.keys().collect();
+	// dbg!(v0);
+	// dbg!(v1);
+	// dbg!(v2);
+
+
+	// for i in 5..9 {
+	// 	h0.insert(i, 44);
+	// 	h1.insert(i, 44);
+	// 	h2.insert(i, 44);
+	// }
+
+
+	// let v0: Vec<_> = h0.keys().collect();
+	// let v1: Vec<_> = h1.keys().collect();
+	// let v2: Vec<_> = h2.keys().collect();
+	// dbg!(v0);
+	// dbg!(v1);
+	// dbg!(v2);
+	// let db_path = "./db";
+	// let db = Database::open(db_path).unwrap();
+	// for x in db.iterate(&"addr").unwrap() {
+	// 	dbg!(x);
+	// }
+	// // db.set(&"test", &42).unwrap();
+	// // dbg!(db.get::<i32>(&"test"));
 }
 	
-pub fn main() {
+#[tokio::main]
+pub async fn main() {
 	{
 		use tracing_subscriber::layer::SubscriberExt;
 		use tracing_subscriber::util::SubscriberInitExt;
 		use tracing_subscriber::*;
 		let indicatif_layer = tracing_indicatif::IndicatifLayer::new();
-		let verbosity = "trace";
+		let verbosity = "debug";
 		let fmt_layer_a = fmt::layer()
 				.with_writer(indicatif_layer.get_stderr_writer())
 				.with_filter(EnvFilter::new(verbosity));
@@ -110,7 +174,7 @@ pub fn main() {
 	let db_path = "./db";
 	let minter = Minter::new(db_path).unwrap();
 	
-	if let Err(err) = Arguments::parse().run(minter) {
+	if let Err(err) = Arguments::parse().run(minter).await {
 		eprintln!("error: {err}");
 		err
 			.chain()

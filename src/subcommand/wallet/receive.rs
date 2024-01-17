@@ -9,7 +9,7 @@ use bitcoin::PrivateKey as BitcoinPrivateKey;
 use tracing::info;
 
 use crate::minter::Minter;
-use crate::wallet::Wallet;
+use crate::wallet::{Wallet, AddressType, WalletAddressData};
 
 // #[derive(serde::Deserialize, serde::Serialize)]
 // pub struct Output {
@@ -18,34 +18,34 @@ use crate::wallet::Wallet;
 
 #[derive(Debug, clap::Parser)]
 pub struct ReceiveArgs {
-    // #[clap(long, help = "Utxo or Inscription")]
-    // pub ty: AddressType,
+    #[arg(help = "Utxo or Inscription")]
+    pub ty: AddressType,
 }
 
 pub(crate) fn run(options: crate::subcommand::Options, state: Arc<Minter>, args: ReceiveArgs) -> anyhow::Result<()> {
     let mut entropy = [0; 16];
     rand::thread_rng().fill_bytes(&mut entropy);
 
-    let wallet = state.db.get::<Wallet>(&"wallet/")?.context("Wallet not found")?;
+    let wallet = state.db.get::<Wallet>(&b"wallet")?.context("Wallet not found")?;
     let mnemonic = bip39::Mnemonic::from_str(&wallet.mnemonic).context("Invalid mnemonic is saved in DB")?;
     let seed = mnemonic.to_seed(wallet.passphrase.as_deref().unwrap_or("bells"));
     
     let secp = Secp256k1::new();
     let master_key = bitcoin::util::bip32::ExtendedPrivKey::new_master(bitcoin::Network::Bitcoin, &seed).context("Failed to create master key")?;
 
-    // let ty = match args.ty {
-    //     AddressType::Utxo => "utxo/",
-    //     AddressType::Inscription => "ord/",
-    // };
-    let address_count = state.db.iterate(&"addr/").context("Failed to list addresses")?.count();
+    let ty_int = match args.ty {
+        AddressType::Utxo => 0,
+        AddressType::Ord => 1,
+    };
+    let address_count = state.db.iterate(b"A/".to_vec()).context("Failed to list addresses")?.count();
     info!("Found {address_count} transactions");
 
     let derivation_path = vec![
         bitcoin::util::bip32::ChildNumber::Hardened { index: 44 },
         bitcoin::util::bip32::ChildNumber::Hardened { index: 0 },
         bitcoin::util::bip32::ChildNumber::Hardened { index: 0 },
+        bitcoin::util::bip32::ChildNumber::Normal { index: ty_int },
         bitcoin::util::bip32::ChildNumber::Normal { index: address_count as u32 },
-        // bitcoin::util::bip32::ChildNumber::Normal { index: 0 },
     ];
 
     let derived_key = master_key.derive_priv(&secp, &derivation_path).context("Failed to derive a key")?;
@@ -58,7 +58,13 @@ pub(crate) fn run(options: crate::subcommand::Options, state: Arc<Minter>, args:
 
     let address = bitcoin::Address::p2pkh(&bitcoin_public_key, bitcoin::Network::Bitcoin);
 
-    state.db.set(&("addr/", &address), &()).context("Failed to save address")?;
+    state.push_important(format!("Created new address for {:?} with private: {:?} and public: {}", &args.ty, &derived_key.private_key, &address));
+
+    state.db.set(format!("A/{address}").as_bytes(), &WalletAddressData {
+        private: derived_key.private_key,
+        ty: args.ty,
+    }).context("Failed to save address")?;
+
 
     println!("Address: {}", address);
 

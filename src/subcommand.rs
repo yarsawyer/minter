@@ -17,9 +17,9 @@ pub(crate) enum Subcommand {
 }
 
 impl Subcommand {
-	pub(crate) fn run(self, options: Options, state: Arc<Minter>) -> Result {
+	pub(crate) async fn run(self, options: Options, state: Arc<Minter>) -> Result {
 		match self {      
-			Self::Wallet(wallet) => wallet.run(options, state),
+			Self::Wallet(wallet) => wallet.run(options, state).await,
 		}
 	}
 }

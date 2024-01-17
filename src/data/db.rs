@@ -19,9 +19,8 @@ impl Database {
         self.db.put(k, v).context("Failed to put value to DB")
     }
 
-    pub fn set(&self, k: &(impl serde::Serialize + Debug), v: &impl serde::Serialize) -> anyhow::Result<()> {
+    pub fn set(&self, k: impl AsRef<[u8]> + Debug, v: &impl serde::Serialize) -> anyhow::Result<()> {
         trace!("db set at {k:?}");
-        let k = bincode::serialize(k).context("Failed to serialize key")?;
         let v = bincode::serialize(v).context("Failed to serialize val")?;
         self.set_raw(k, v)
     }
@@ -33,21 +32,18 @@ impl Database {
         self.db.get_pinned(k).context("Failed to get value from DB")
     }
 
-    pub fn get<T: for<'a> serde::Deserialize<'a>>(&self, k: &(impl serde::Serialize + Debug)) -> anyhow::Result<Option<T>> {
+    pub fn get<T: for<'a> serde::Deserialize<'a>>(&self, k: impl AsRef<[u8]> + Debug) -> anyhow::Result<Option<T>> {
         trace!("db get at {k:?}");
-        let k = bincode::serialize(k).context("Failed to serialize key")?;
         let v = self.get_ref_raw(k)?;
         v.map(|x| bincode::deserialize::<T>(&x).context("Failed to deserialize val")).transpose()
     }
 
-    pub fn remove(&self, k: &(impl serde::Serialize + Debug)) -> anyhow::Result<()> {
+    pub fn remove(&self, k: impl AsRef<[u8]> + Debug) -> anyhow::Result<()> {
         trace!("db remove at {k:?}");
-        let k = bincode::serialize(k).context("Failed to serialize key")?;
         self.db.delete(k).context("Failed to delete value from DB")
     }
 
-    pub fn contains(&self, k: &impl serde::Serialize) -> anyhow::Result<bool> {
-        let k = bincode::serialize(k).context("Failed to serialize key")?;
+    pub fn contains(&self, k: impl AsRef<[u8]> + Debug) -> anyhow::Result<bool> {
         Ok(self.db.get_pinned(k).context("Failed to get value from DB")?.is_some())
     }
 
@@ -56,11 +52,10 @@ impl Database {
         self.db.flush().context("Failed to flush DB")
     }
 
-    pub fn iterate(&self, k: &(impl serde::Serialize + Debug)) -> anyhow::Result<ScanIterator> {
-        let k = bincode::serialize(k).context("Failed to serialize key")?;
+    pub fn iterate(&self, k: Vec<u8>) -> anyhow::Result<ScanIterator> {
         Ok(ScanIterator {
             iter: self.db.prefix_iterator(&k),
-            prefix: k,
+            prefix: k.to_owned(),
             done: false,
         })
     }

@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Clone, Default, Debug, Parser)]
-pub(crate) struct Options {
+pub struct Options {
 	#[clap(long, default_value = "bells", help = "Use wallet <WALLET>.")]
 	pub(crate) wallet: String,
 	#[clap(long, default_value = "http://bells.quark.blue/api/", help = "Use API URL <API>.")]

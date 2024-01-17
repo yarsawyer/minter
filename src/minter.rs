@@ -44,6 +44,12 @@ impl Minter {
         Ok(())
     }
 
+    pub fn remove_address(&self, pub_key: &str) -> anyhow::Result<()> {
+        self.db.remove(format!("A/{pub_key}").as_bytes()).context("Failed to remove address")?;
+        self.push_important(format!("Removed address '{pub_key}'"));
+        Ok(())
+    }
+
     pub fn addresses<'a: 'b, 'b>(&'a self) -> anyhow::Result<impl Iterator<Item = (String,WalletAddressData)> + 'b> {
         let iter = self.db
             .iterate(b"A/".to_vec())

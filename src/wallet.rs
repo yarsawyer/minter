@@ -10,7 +10,7 @@ pub enum AddressType {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct WalletAddressData {
-	pub(crate) private: SecretKey,
+	pub(crate) private: Option<SecretKey>,
 	pub ty: AddressType,
 }
 

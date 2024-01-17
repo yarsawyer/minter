@@ -1,19 +1,19 @@
-use std::sync::Arc;
+// use std::sync::Arc;
 
-use anyhow::{Context, bail};
-use reqwest::StatusCode;
-use tracing::debug;
+// use anyhow::{Context, bail};
+// use reqwest::StatusCode;
+// use tracing::debug;
 
-use crate::minter::Minter;
+// use crate::minter::Minter;
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct Output {
-    transactions: Vec<String>,
-}
-#[derive(Debug, clap::Parser)]
-pub struct Transactions {
+// #[derive(serde::Serialize, serde::Deserialize)]
+// pub struct Output {
+//     transactions: Vec<String>,
+// }
+// #[derive(Debug, clap::Parser)]
+// pub struct Transactions {
 
-}
+// }
 
 // mod get_transactions_api_types {
 //     pub struct 

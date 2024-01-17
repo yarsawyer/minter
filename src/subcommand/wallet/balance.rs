@@ -1,17 +1,16 @@
-use std::{str::from_utf8, io::Read, sync::Arc};
+use std::sync::Arc;
 
-use itertools::Itertools;
 use reqwest::StatusCode;
 use anyhow::{Result, Context, bail};
-use tracing::{error, debug, info};
+use tracing::{debug, info};
 
-use crate::{wallet::WalletAddressData, minter::Minter, subcommand::print_json};
+use crate::{ minter::Minter, subcommand::print_json};
 
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Output {
-    pub cardinal: u64,
-    pub ordinal: u64,
+    pub cardinal: f64,
+    pub ordinal: f64,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -51,6 +50,10 @@ pub(crate) async fn run(options: crate::subcommand::Options, state: Arc<Minter>)
         match resp.status() {
             StatusCode::OK => {
                 let addr_data = resp.json::<ApiAddress>().await.context("Api get balance invalid json")?;
+                if addr_data.chain_stats.funded_txo_sum < addr_data.chain_stats.spent_txo_sum {
+                    bail!("Api is insane! Funded is less than spent!");
+                }
+                //todo: add from mempool?
                 let addr_balance = addr_data.chain_stats.funded_txo_sum - addr_data.chain_stats.spent_txo_sum;
                 info!("Address {pub_key} balance: {addr_balance}");
 
@@ -66,8 +69,8 @@ pub(crate) async fn run(options: crate::subcommand::Options, state: Arc<Minter>)
     }
 
     print_json(Output {
-        cardinal: balance_utxo_sat,
-        ordinal: balance_ord_sat,
+        cardinal: bitcoin::Amount::from_sat(balance_utxo_sat).to_btc(),
+        ordinal: bitcoin::Amount::from_sat(balance_ord_sat).to_btc(),
     }).unwrap();
     
     Ok(())

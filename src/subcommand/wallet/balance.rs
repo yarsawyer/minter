@@ -1,22 +1,20 @@
-use {super::*, crate::wallet::Wallet, std::collections::BTreeSet};
-use std::{str::from_utf8, io::Read};
+use std::{str::from_utf8, io::Read, sync::Arc};
 
-use bitcoin::Amount;
 use itertools::Itertools;
 use reqwest::StatusCode;
-use anyhow::{Result, Error};
-use tracing::{error, debug, trace, info};
+use anyhow::{Result, Context, bail};
+use tracing::{error, debug, info};
 
-use crate::wallet::WalletAddressData;
+use crate::{wallet::WalletAddressData, minter::Minter, subcommand::print_json};
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Output {
     pub cardinal: u64,
     pub ordinal: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct ApiChainStats {
     pub funded_txo_count: u64,
     pub funded_txo_sum: u64,
@@ -25,7 +23,7 @@ pub struct ApiChainStats {
     pub tx_count: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct ApiMempoolStats {
     pub funded_txo_count: u64,
     pub funded_txo_sum: u64,
@@ -34,7 +32,7 @@ pub struct ApiMempoolStats {
     pub tx_count: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct ApiAddress {
     pub address: String,
     pub chain_stats: ApiChainStats,
@@ -43,7 +41,7 @@ pub struct ApiAddress {
 
 
 
-pub(crate) async fn run(options: Options, state: Arc<Minter>) -> Result<()> {
+pub(crate) async fn run(options: crate::subcommand::Options, state: Arc<Minter>) -> Result<()> {
     let mut balance_utxo_sat = 0;
     let mut balance_ord_sat = 0;
     for (key, val) in state.db.iterate(b"A/".to_vec()).context("Failed to query wallet addresses")? {

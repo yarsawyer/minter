@@ -3,26 +3,26 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use bitcoin::secp256k1::rand::RngCore;
-use bitcoin::secp256k1::{Secp256k1, SecretKey, PublicKey, rand};
+use bitcoin::secp256k1::{Secp256k1, PublicKey, rand};
 use bitcoin::PublicKey as BitcoinPublicKey;
-use bitcoin::PrivateKey as BitcoinPrivateKey;
 use tracing::info;
 
 use crate::minter::Minter;
+use crate::subcommand::print_json;
 use crate::wallet::{Wallet, AddressType, WalletAddressData};
 
-// #[derive(serde::Deserialize, serde::Serialize)]
-// pub struct Output {
-//     pub address: Address,
-// }
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct Output {
+    pub address: bitcoin::Address,
+}
 
 #[derive(Debug, clap::Parser)]
 pub struct ReceiveArgs {
-    #[arg(help = "Utxo or Inscription")]
+    #[arg(help = "utxo or ord")]
     pub ty: AddressType,
 }
 
-pub(crate) fn run(options: crate::subcommand::Options, state: Arc<Minter>, args: ReceiveArgs) -> anyhow::Result<()> {
+pub(crate) fn run(_options: crate::subcommand::Options, state: Arc<Minter>, args: ReceiveArgs) -> anyhow::Result<()> {
     let mut entropy = [0; 16];
     rand::thread_rng().fill_bytes(&mut entropy);
 
@@ -65,8 +65,9 @@ pub(crate) fn run(options: crate::subcommand::Options, state: Arc<Minter>, args:
         ty: args.ty,
     }).context("Failed to save address")?;
 
-
-    println!("Address: {}", address);
+    print_json(Output {
+        address,
+    }).unwrap();
 
     Ok(())
 }

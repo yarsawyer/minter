@@ -5,6 +5,9 @@ use minter::Minter;
 
 use {
 		self::{
+			deserialize_from_str::DeserializeFromStr,
+			inscription_id::InscriptionId,
+			outgoing::Outgoing,
 			arguments::Arguments,
 			subcommand::Subcommand,
 			options::Options,
@@ -46,9 +49,19 @@ use {
 		tokio
 };
 
+pub use crate::{
+	fee_rate::FeeRate,
+};
+  
+
 mod arguments;
 mod wallet;
 mod config;
+mod deserialize_from_str;
+mod outgoing;
+mod inscription_id;
+mod fee_rate;
+
 
 pub mod options;
 pub mod subcommand;

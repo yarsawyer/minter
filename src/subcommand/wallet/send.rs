@@ -1,5 +1,5 @@
 use std::sync::Arc;
-
+use super::*;
 use crate::minter::Minter;
 
 
@@ -11,16 +11,22 @@ use crate::minter::Minter;
 
 #[derive(Debug, clap::Parser)]
 pub struct Send {
-    #[arg(help = "target public wallet address")]
-    pub address_dest: String,
-
-    #[arg(help = "sum or inscription id")]
-    pub value: String,
+    address: Address,
+    outgoing: Outgoing,
+    #[clap(long, help = "Use fee rate of <FEE_RATE> nook/vB")]
+    fee_rate: FeeRate,
 }
 
 
 impl Send {
     pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+
+        println!("address dest: {}", self.address);
+        println!("value: {:?}", self.outgoing);
+
+
+
+
         // get utxo and vout
         // make input
         // make output

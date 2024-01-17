@@ -97,23 +97,23 @@ impl FromStr for Denomination {
 }
 
 fn denomination_from_str(mut s: &str) -> Option<Denomination> {
-    if s.eq_ignore_ascii_case("BTC") {
+    if s.eq_ignore_ascii_case("BEL") {
         return Some(Denomination::Bitcoin);
     }
 
-    if s.eq_ignore_ascii_case("mBTC") {
+    if s.eq_ignore_ascii_case("mBEL") {
         return Some(Denomination::MilliBitcoin);
     }
 
-    if s.eq_ignore_ascii_case("uBTC") {
+    if s.eq_ignore_ascii_case("uBEL") {
         return Some(Denomination::MicroBitcoin);
     }
 
-    if s.eq_ignore_ascii_case("nBTC") {
+    if s.eq_ignore_ascii_case("nBEL") {
         return Some(Denomination::NanoBitcoin);
     }
 
-    if s.eq_ignore_ascii_case("pBTC") {
+    if s.eq_ignore_ascii_case("pBEL") {
         return Some(Denomination::PicoBitcoin);
     }
 

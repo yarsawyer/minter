@@ -49,6 +49,8 @@ use {
 		tokio
 };
 
+#[macro_use] extern crate tracing;
+
 pub use crate::{
 	fee_rate::FeeRate,
 };
@@ -185,9 +187,10 @@ pub async fn main() {
 	.expect("Error setting ctrl-c handler");
 
 	let db_path = "./db";
-	let minter = Minter::new(db_path).unwrap();
+	let args = Arguments::parse();
+	let minter = Minter::new(db_path, args.options.api_url.clone()).unwrap();
 	
-	if let Err(err) = Arguments::parse().run(minter).await {
+	if let Err(err) = args.run(minter).await {
 		eprintln!("error: {err}");
 		err
 			.chain()

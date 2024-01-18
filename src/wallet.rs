@@ -1,6 +1,6 @@
 use bitcoin::secp256k1::SecretKey;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, clap::ValueEnum)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, clap::ValueEnum, PartialEq, Eq)]
 pub enum AddressType {
 	#[clap(name = "utxo")]
 	Utxo,
@@ -15,7 +15,8 @@ pub struct WalletAddressData {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) struct Wallet {
+pub struct Wallet {
+	pub name: String,
     pub mnemonic: String,
     pub passphrase: Option<String>,
     // pub addresses: Vec<WalletAddress>,
@@ -24,8 +25,9 @@ pub(crate) struct Wallet {
 }
 
 impl Wallet {
-	pub fn new(mnemonic: String, passphrase: Option<String>) -> Self {
+	pub fn new(mnemonic: String, passphrase: Option<String>, name: String) -> Self {
 		Self {
+			name,
 			mnemonic,
 			passphrase,
 			// addresses: vec![],

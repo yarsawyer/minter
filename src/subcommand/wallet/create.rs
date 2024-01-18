@@ -20,19 +20,19 @@ pub(crate) struct Create {
 }
 
 impl Create {
-	pub(crate) fn run(self, _options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+	pub(crate) fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+		if state.get_wallet(&options.wallet)?.is_some() {
+			bail!("Wallet {} already exists. Create new one with --wallet <name> flag", &options.wallet);
+		}
+
 		let mut entropy = [0; 16];
 		rand::thread_rng().fill_bytes(&mut entropy);
 
 		let mnemonic = bip39::Mnemonic::from_entropy(&entropy)?;
 
-		let wallet = Wallet::new(mnemonic.to_string(), Some(self.passphrase.clone()));
+		let wallet = Wallet::new(mnemonic.to_string(), Some(self.passphrase.clone()), options.wallet.clone());
 
-		if state.db.contains(b"wallet").context("Failed to query wallet to database")? {
-			bail!("Wallet already exists");
-		}
-
-		state.db.set(b"wallet", &wallet).context("Failed to save wallet to database")?;
+		state.db.set(state.tables.wallets.table(), &options.wallet, &wallet).context("Failed to save wallet to database")?;
 
 		state.push_important("There is no wallet saved in DB");
 		state.push_important(format!("Created new wallet with mnemonic: {mnemonic}"));

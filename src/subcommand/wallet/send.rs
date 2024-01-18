@@ -17,12 +17,23 @@ pub struct Send {
     fee_rate: FeeRate,
 }
 
+//todo: multiple wallets
+//todo: save utxo to db. retrieve from api if there are not enough
+//todo: cmd to get private from public
+//todo: rename 'ty' to 'type' in json
+
 
 impl Send {
-    pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+    pub async fn run(self, _options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+        debug!("Sending tx");
 
-        println!("address dest: {}", self.address);
-        println!("value: {:?}", self.outgoing);
+        trace!("Collecting utxo's for transaction");
+        // let utxo = state.get_all_utxo(crate::wallet::AddressType::Utxo).await.context("Failed to retrieve available utxo's for transaction")?;
+
+
+
+        // println!("address dest: {}", self.address);
+        // println!("value: {:?}", self.outgoing);
 
 
 

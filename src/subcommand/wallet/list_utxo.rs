@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Context, bail};
-use reqwest::StatusCode;
+use anyhow::Context;
 use tracing::debug;
 
 use crate::{minter::Minter, subcommand::print_json};
@@ -9,10 +8,10 @@ use crate::{minter::Minter, subcommand::print_json};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Output {
-    utxo: Vec<UtxoData>,
+    utxo: Vec<OutputUtxoData>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct UtxoData {
+pub struct OutputUtxoData {
     pub txid: String,
     pub vout: u32,
     pub confirmed: bool,
@@ -25,72 +24,21 @@ pub struct ListUtxo {
     pub address: String,
 }
 
-mod get_utxo_api_types {
-    use bitcoin::BlockHash;
-
-    #[derive(Debug, serde::Serialize, serde::Deserialize)]
-    pub struct UtxoData {
-        pub txid: String,
-        pub vout: u32,
-        pub status: Status,
-        pub value: u64,
-        #[serde(default, flatten)] pub inscription_meta: Option<InscriptionMeta>,
-        #[serde(default)] pub owner: Option<String>,
-    }
-
-    #[derive(Debug, serde::Serialize, serde::Deserialize)]
-    pub struct Status {
-        pub confirmed: bool,
-        #[serde(default)] pub block_height: Option<usize>,
-        #[serde(default)] pub block_hash: Option<BlockHash>,
-        #[serde(default)] pub block_time: Option<u32>,
-    }
-    
-    #[derive(Debug, serde::Serialize, serde::Deserialize)]
-    pub struct InscriptionId {
-        pub txid: bitcoin::Txid,
-        pub index: u32,
-    }
-
-    #[derive(Debug, serde::Serialize, serde::Deserialize)]
-    pub struct InscriptionMeta {
-        pub content_type: String,
-        pub content_length: usize,
-        pub outpoint: bitcoin::Txid,
-        pub genesis: bitcoin::Txid,
-        pub inscription_id: InscriptionId,
-        pub number: usize,
-    }
-}
-
 impl ListUtxo {
     pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
         debug!("Retrieving utxo of address {}", self.address);
-
-        let url = format!("{}/address/{}/utxo", &options.api_url.trim_end_matches('/'), &self.address);
-        let resp = state.reqwest_client.get(url).send().await.context("Failed to send api get utxo request")?;
-        
-        match resp.status() {
-            StatusCode::OK => {
-                let data = resp.json::<Vec<get_utxo_api_types::UtxoData>>().await.context("Api get utxo invalid json")?;
-
-                print_json(Output {
-                    utxo: data
-                        .into_iter()
-                        .map(|x| UtxoData {
-                            txid: x.txid,
-                            vout: x.vout,
-                            confirmed: x.status.confirmed,
-                            value: bitcoin::Amount::from_sat(x.value).to_btc(),
-                        })
-                        .collect(),
-                }).unwrap();
-            }
-            err => {
-                bail!("Api get utxo error: {err}");
-            }
-        }
-
+        let utxo = state.fetch_utxo(&options.wallet).await.context("Failed to fetch utxo's")?;
+        print_json(Output {
+            utxo: utxo
+                .iter()
+                .map(|(_addr,x)| OutputUtxoData {
+                    txid: x.txid.clone(),
+                    vout: x.vout,
+                    confirmed: x.status.confirmed,
+                    value: bitcoin::Amount::from_sat(x.value).to_btc(),
+                })
+                .collect(),
+        }).unwrap();
         Ok(())
     }
 }

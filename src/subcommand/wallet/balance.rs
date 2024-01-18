@@ -43,7 +43,7 @@ pub struct ApiAddress {
 pub(crate) async fn run(options: crate::subcommand::Options, state: Arc<Minter>) -> Result<()> {
     let mut balance_utxo_sat = 0;
     let mut balance_ord_sat = 0;
-    for (pub_key, addr) in state.addresses()? {
+    for (pub_key, addr) in state.addresses(&options.wallet)? {
         debug!("Checking balance of address {pub_key}");
         let url = format!("{}/address/{}", &options.api_url.trim_end_matches('/'), &pub_key);
         let resp = state.reqwest_client.get(url).send().await.context("Failed to send api get balance request")?;

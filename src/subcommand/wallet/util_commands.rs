@@ -22,12 +22,12 @@ pub struct AddAddress {
 }
 
 impl AddAddress {
-    pub async fn run(self, _: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+    pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
         let private = self.private.as_deref().map(SecretKey::from_str).transpose().context("Invalid private address")?;
         state.push_address(&self.address.to_string(), &WalletAddressData {
             private,
             ty: self.ty,
-        })?;
+        }, &options.wallet)?;
 
         Ok(())
     }
@@ -40,8 +40,8 @@ pub struct RemoveAddress {
 }
 
 impl RemoveAddress {
-    pub async fn run(self, _: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
-        state.remove_address(&self.address)?;
+    pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+        state.remove_address(&self.address, &options.wallet)?;
         Ok(())
     }
 }
@@ -62,8 +62,8 @@ pub struct ListAddresses {
 }
 
 impl ListAddresses {
-    pub async fn run(self, _: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
-        let items = state.addresses()?
+    pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+        let items = state.addresses(&options.wallet)?
             .map(|x| ListAddressesOutputItem {
                 address: x.0,
                 private: x.1.private.map(|x| format!("{}", x.display_secret())),

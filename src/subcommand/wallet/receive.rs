@@ -9,7 +9,7 @@ use tracing::info;
 
 use crate::minter::Minter;
 use crate::subcommand::print_json;
-use crate::wallet::{Wallet, AddressType, WalletAddressData};
+use crate::wallet::{AddressType, WalletAddressData};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Output {
@@ -22,11 +22,11 @@ pub struct ReceiveArgs {
     pub ty: AddressType,
 }
 
-pub(crate) fn run(_options: crate::subcommand::Options, state: Arc<Minter>, args: ReceiveArgs) -> anyhow::Result<()> {
+pub(crate) fn run(options: crate::subcommand::Options, state: Arc<Minter>, args: ReceiveArgs) -> anyhow::Result<()> {
     let mut entropy = [0; 16];
     rand::thread_rng().fill_bytes(&mut entropy);
 
-    let wallet = state.db.get::<Wallet>(&b"wallet")?.context("Wallet not found")?;
+    let wallet = state.get_wallet(&options.wallet)?.context("Wallet not found")?;
     let mnemonic = bip39::Mnemonic::from_str(&wallet.mnemonic).context("Invalid mnemonic is saved in DB")?;
     let seed = mnemonic.to_seed(wallet.passphrase.as_deref().unwrap_or("bells"));
     
@@ -37,7 +37,7 @@ pub(crate) fn run(_options: crate::subcommand::Options, state: Arc<Minter>, args
         AddressType::Utxo => 0,
         AddressType::Ord => 1,
     };
-    let address_count = state.db.iterate(b"A/".to_vec()).context("Failed to list addresses")?.count();
+    let address_count = state.addresses(&options.wallet).context("Failed to list addresses")?.count();
     info!("Found {address_count} transactions");
 
     let derivation_path = vec![
@@ -61,7 +61,7 @@ pub(crate) fn run(_options: crate::subcommand::Options, state: Arc<Minter>, args
     state.push_address(&address.to_string(), &WalletAddressData {
         private: Some(derived_key.private_key),
         ty: args.ty,
-    })?;
+    }, &options.wallet)?;
 
     print_json(Output {
         address,

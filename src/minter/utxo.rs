@@ -131,7 +131,6 @@ impl Default for UtxoMultiList { fn default() -> Self { Self::new() } }
 
 
 impl super::Minter {
-    //todo: deny wallets with '/' symbol
     /// Get cached (saved to DB) utxo's using specific address
     pub fn get_utxo(&self, address: &str, wallet: &str) -> anyhow::Result<UtxoList> {
         let mut prefix = wallet.to_owned();
@@ -183,6 +182,7 @@ impl super::Minter {
         self.get_all_utxo_for(&mut addresses, wallet).map(|_|addresses.into())
     }
 
+    //todo: add timeouts
     /// Get utxo's from api without any DB interaction
     async fn get_utxo_from_api(&self, address: &str, ty: AddressType) -> anyhow::Result<Vec<UtxoData>> {
         debug!("Retrieving utxo of address {}", address);

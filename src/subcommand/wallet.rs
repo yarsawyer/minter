@@ -40,14 +40,14 @@ pub(crate) enum Wallet {
 	#[clap(about = "Generate receive address")]
 	Receive(ReceiveArgs),
 	
-	#[clap(about = "Get utxo's of address")]
+	#[clap(about = "Get utxo's of address", name="utxo")]
 	ListUtxo(list_utxo::ListUtxo),
 
 	#[clap(about = "Add address")]
 	AddAddress(util_commands::AddAddress),
 	#[clap(about = "Remove address")]
 	RemoveAddress(util_commands::RemoveAddress),
-	#[clap(about = "List addresses")]
+	#[clap(about = "List addresses", name="addresses")]
 	ListAddresses(util_commands::ListAddresses),
 	#[clap(about = "Send")]
 	Send(send::Send),

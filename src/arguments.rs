@@ -14,6 +14,10 @@ pub(crate) struct Arguments {
 
 impl Arguments {
     pub(crate) async fn run(self, state: Arc<Minter>) -> Result {
+        //todo: add more forbidden chars?
+        if self.options.wallet.contains('/') {
+            bail!("Wallet names can't contain '/' symbols");
+        }
         self.subcommand.run(self.options, state).await
     }
 }

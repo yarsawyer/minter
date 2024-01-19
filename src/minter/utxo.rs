@@ -267,12 +267,40 @@ impl super::Minter {
         Ok(utxo)
     }
 
-    // pub async fn send_utxo(&self, dest: bitcoin::Address, amount: bitcoin::Amount) -> anyhow::Result<()> {
-    //     debug!("Sending tx");
+    //todo: update in DB after transactions
+    pub async fn gather_utxo(&self, wallet: &str, ty: AddressType, value: u64) -> anyhow::Result<Vec<(String, UtxoData)>> {
+        let mut cur_value = 0;
+        let mut gathered_utxo = vec![];
 
-    //     trace!("Collecting utxo's for transaction");
-    //     let utxo = self.get_all_utxo(crate::wallet::AddressType::Utxo).await.context("Failed to retrieve available utxo's for transaction")?;
+        for (addr,utxo) in self.get_all_utxo(wallet, |_,v| v.ty == ty).context("Failed to get cached utxo")?.iter() {
+            cur_value += utxo.value;
+            gathered_utxo.push((addr.to_owned(), utxo.clone()));
+            if cur_value >= value { return Ok(gathered_utxo); }
+        }
+
+        info!("Not enough cached utxo. Getting new from api");
+        cur_value = 0;
+        gathered_utxo.clear();
+        for (addr,utxo) in self.fetch_utxo(wallet, |_,v| v.ty == ty, |_,v| v.ty == ty).await.context("Failed to get cached utxo")?.iter() {
+            cur_value += utxo.value;
+            gathered_utxo.push((addr.to_owned(), utxo.clone()));
+            if cur_value >= value { return Ok(gathered_utxo); }
+        }
+
+        warn!("Not enough utxo");
+        
+        Ok(vec![])
+    }
+
+    pub async fn send_utxo(&self, wallet: &str, dest: bitcoin::Address, amount: bitcoin::Amount) -> anyhow::Result<()> {
+        debug!("Sending tx");
+
+        trace!("Collecting utxo's for transaction");
+        let utxo = self.gather_utxo(wallet, AddressType::Utxo, amount.to_sat()).await.context("Failed to retrieve available utxo's for transaction")?;
 
         
-    // }
+
+        dbg!(utxo);
+        Ok(())
+    }
 }

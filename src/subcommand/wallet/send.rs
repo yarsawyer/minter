@@ -17,13 +17,20 @@ pub struct Send {
     fee_rate: FeeRate,
 }
 
-//todo: cmd to get private from public
-
 impl Send {
-    pub async fn run(self, _options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
-        debug!("Sending tx");
+    //todo: ord
+    pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+        let amount = match self.outgoing {
+            Outgoing::Amount(x) => x,
+            Outgoing::InscriptionId(_) => bail!("shit"),
+        };
+        state.send_utxo(&options.wallet, self.address, amount).await.context("Failed to send")?;
+        // debug!("Sending tx");
 
-        trace!("Collecting utxo's for transaction");
+        // trace!("Collecting utxo's for transaction");
+
+        // let utxo = state.get_all_utxo(&options.wallet, |_,v| v.ty == AddressType::Utxo).context("Failed to retrieve available utxo's for transaction")?;
+        // let utxo = state.g
         // let utxo = state.get_all_utxo(crate::wallet::AddressType::Utxo).await.context("Failed to retrieve available utxo's for transaction")?;
 
 

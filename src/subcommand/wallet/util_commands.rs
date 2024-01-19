@@ -11,7 +11,7 @@ use crate::{minter::Minter, wallet::{AddressType, WalletAddressData}, subcommand
 // }
 #[derive(Debug, clap::Parser)]
 pub struct AddAddress {
-    #[arg(help = "utxo or ord")]
+    #[arg(help = "utxo or ord", name="type")]
     pub ty: AddressType,
 
     #[arg(help = "public wallet address")]
@@ -54,7 +54,7 @@ pub struct ListAddressesOutput {
 pub struct ListAddressesOutputItem {
     pub address: String,
     pub private: Option<String>,
-    pub ty: AddressType,
+    #[serde(rename="type")] pub ty: AddressType,
 }
 
 #[derive(Debug, clap::Parser)]

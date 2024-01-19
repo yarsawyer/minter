@@ -18,7 +18,7 @@ pub struct Output {
 
 #[derive(Debug, clap::Parser)]
 pub struct ReceiveArgs {
-    #[arg(help = "utxo or ord")]
+    #[arg(help = "utxo or ord", name="type")]
     pub ty: AddressType,
 }
 

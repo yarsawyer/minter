@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use super::*;
-use crate::minter::Minter;
+use crate::{minter::Minter, wallet::AddressType};
 
 
 // #[derive(serde::Serialize, serde::Deserialize)]
@@ -17,11 +17,7 @@ pub struct Send {
     fee_rate: FeeRate,
 }
 
-//todo: multiple wallets
-//todo: save utxo to db. retrieve from api if there are not enough
 //todo: cmd to get private from public
-//todo: rename 'ty' to 'type' in json
-
 
 impl Send {
     pub async fn run(self, _options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {

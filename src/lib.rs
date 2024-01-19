@@ -84,8 +84,12 @@ fn timestamp(seconds: u32) -> DateTime<Utc> {
 const INTERRUPT_LIMIT: u64 = 5;
 
 fn quick_test() {
-	// let db_path = "./db";
-	// let db = Database::open(db_path).unwrap();
+	let db_path = "./db";
+	let db = Database::open(db_path).unwrap();
+	let cf = db.column_family("utxo").unwrap();
+
+	db.remove(&cf, b"did_not_exists").unwrap();
+
 
 	// let start = Instant::now();
 

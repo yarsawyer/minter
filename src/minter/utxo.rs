@@ -2,12 +2,24 @@ use std::{collections::HashMap, str::from_utf8};
 
 use anyhow::{bail, Context};
 use bitcoin::BlockHash;
+use itertools::Itertools;
 
-use crate::wallet::AddressType;
+use crate::wallet::{AddressType, WalletAddressData};
 
-
+// bincode does not support 'flatten' but we need it to access api
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UtxoData {
+    pub txid: String,
+    pub vout: u32,
+    pub status: Status,
+    pub value: u64,
+    pub ty: AddressType,
+    #[serde(default)] pub inscription_meta: Option<InscriptionMeta>,
+    #[serde(default)] pub owner: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UtxoApiData {
     pub txid: String,
     pub vout: u32,
     pub status: Status,
@@ -64,6 +76,11 @@ impl From<Vec<UtxoList>> for UtxoMultiList {
 impl From<UtxoMultiList> for Vec<UtxoList> {
     fn from(value: UtxoMultiList) -> Self { value.per_address }
 }
+impl From<HashMap<String, UtxoList>> for UtxoMultiList {
+    fn from(value: HashMap<String, UtxoList>) -> Self {
+        Self { per_address: value.into_values().collect_vec() }
+    }
+}
 impl IntoIterator for UtxoList {
     type Item = UtxoData;
     type IntoIter = <Vec<UtxoData> as IntoIterator>::IntoIter;
@@ -115,7 +132,8 @@ impl Default for UtxoMultiList { fn default() -> Self { Self::new() } }
 
 impl super::Minter {
     //todo: deny wallets with '/' symbol
-    pub fn get_utxo(&self, address: &str, wallet: &str) -> anyhow::Result<Vec<UtxoData>> {
+    /// Get cached (saved to DB) utxo's using specific address
+    pub fn get_utxo(&self, address: &str, wallet: &str) -> anyhow::Result<UtxoList> {
         let mut prefix = wallet.to_owned();
         prefix.push('/');
         prefix.push_str(address);
@@ -130,65 +148,75 @@ impl super::Minter {
                 Some(data)
             })
             .collect();
-        Ok(utxo)
+        Ok(UtxoList { addr: address.to_owned(), utxo })
     }
 
-    //todo: replace hashmap with something less hardcoded
     //todo: better error log
-    pub fn get_all_utxo_for<V>(&self, addresses: &HashMap<String,V>, wallet: &str) -> anyhow::Result<Vec<UtxoData>> {
-        let utxo = self.db.iterate(self.tables.utxo.table(), wallet.to_owned().into_bytes())
-            .context("Failed to get utxo's")?
-            .filter_map(|(k,v)| {
-                let Some(addr) = k.split(|&x|x==b'/').nth(1) else {
-                    error!("Invalid UTXO path");
-                    return None;
-                };
-                let Ok(addr) = from_utf8(addr) else {
-                    error!("Invalid UTXO path (address is not utf-8)");
-                    return None;
-                };
-                if !addresses.contains_key(addr) { return None; }
-
-                let Ok(data) = bincode::deserialize::<UtxoData>(&v) else {
-                    error!("Invalid UTXO data");
-                    return None;
-                };
-                Some(data)
-            })
-            .collect();
-        Ok(utxo)
+    fn get_all_utxo_for(&self, addresses: &mut HashMap<String,UtxoList>, wallet: &str) -> anyhow::Result<()> {
+        let iter = self.db.iterate(self.tables.utxo.table(), wallet.to_owned().into_bytes())
+            .context("Failed to get utxo's")?;
+        for (k,v) in iter {
+            let Some(addr) = k.split(|&x|x==b'/').nth(1) else {
+                error!("Invalid UTXO path");
+                continue;
+            };
+            let Ok(addr) = from_utf8(addr) else {
+                error!("Invalid UTXO path (address is not utf-8)");
+                continue;
+            };
+            if !addresses.contains_key(addr) { continue; }
+            let Ok(data) = bincode::deserialize::<UtxoData>(&v) else {
+                error!("Invalid UTXO data");
+                continue;
+            };
+            addresses.get_mut(addr).unwrap().utxo.push(data);
+        }
+        Ok(())
     }
     
-    //todo: use our structures for utxo lists
-    //todo: do something with this shitcode
-    //todo: cache?
-    pub fn get_all_utxo(&self, ty: AddressType, wallet: &str) -> anyhow::Result<Vec<UtxoData>> {
-        let addresses = self.addresses(wallet)?
-            .filter_map(|x|(x.1.ty == ty).then_some((x.0.clone(), UtxoList::new(x.0, vec![]))))
+    /// Get all cached (saved to DB) utxo's using specific filter
+    pub fn get_all_utxo(&self, wallet: &str, selector: impl Fn(&str, &WalletAddressData) -> bool) -> anyhow::Result<UtxoMultiList> {
+        let mut addresses = self.addresses(wallet)?
+            .filter_map(|x| selector(&x.0,&x.1).then_some((x.0.clone(), UtxoList::new(x.0, vec![]))))
             .collect::<HashMap<_,_>>();
 
-        self.get_all_utxo_for(&addresses, wallet)
+        self.get_all_utxo_for(&mut addresses, wallet).map(|_|addresses.into())
     }
 
     /// Get utxo's from api without any DB interaction
-    async fn get_utxo_from_api(&self, address: &str) -> anyhow::Result<Vec<UtxoData>> {
+    async fn get_utxo_from_api(&self, address: &str, ty: AddressType) -> anyhow::Result<Vec<UtxoData>> {
         debug!("Retrieving utxo of address {}", address);
     
         let url = format!("{}/address/{}/utxo", &self.api_url.trim_end_matches('/'), &address);
         let resp = self.reqwest_client.get(url).send().await.context("Failed to send api get utxo request")?;
         
         match resp.status() {
-            reqwest::StatusCode::OK => Ok(resp.json::<Vec<UtxoData>>().await.context("Api get utxo invalid json")?),
+            reqwest::StatusCode::OK => Ok(
+                resp.json::<Vec<UtxoApiData>>()
+                    .await
+                    .context("Api get utxo invalid json")?
+                    .into_iter()
+                    .map(|x| UtxoData {
+                        txid: x.txid,
+                        vout: x.vout,
+                        status: x.status,
+                        value: x.value,
+                        inscription_meta: x.inscription_meta,
+                        owner: x.owner,
+                        ty,
+                    })
+                    .collect_vec()
+            ),
             err => bail!("Api get utxo error: {err}")
         }
     }
 
     /// Get utxo's from api without any DB interaction
-    async fn get_all_utxo_from_api(&self, ty: AddressType, wallet: &str) -> anyhow::Result<UtxoMultiList> {
+    async fn get_all_utxo_from_api(&self, wallet: &str, selector: impl Fn(&str, &WalletAddressData) -> bool) -> anyhow::Result<UtxoMultiList> {
         let mut utxo = UtxoMultiList::new();
         for (addr, addr_data) in self.addresses(wallet)? {
-            if addr_data.ty != ty { continue; }
-            let new_utxo = self.get_utxo_from_api(&addr).await.context("Failed to get utxo")?;
+            if !selector(&addr, &addr_data) { continue; }
+            let new_utxo = self.get_utxo_from_api(&addr, addr_data.ty).await.context("Failed to get utxo")?;
             utxo.push(UtxoList {
                 addr,
                 utxo: new_utxo,
@@ -198,20 +226,26 @@ impl super::Minter {
     }
 
     /// Remove all saved utxo's from DB
-    pub fn clear_saved_utxo(&self, wallet: &str) -> anyhow::Result<usize> {
+    pub fn clear_saved_utxo(&self, wallet: &str, selector: impl Fn(&str, &UtxoData) -> bool) -> anyhow::Result<usize> {
         let mut prefix = wallet.to_owned().into_bytes();
         prefix.push(b'/');
-        self.db.remove_where(self.tables.utxo.table(), prefix, |_|true).context("Failed to delete saved utxo")
+        self.db.remove_where(self.tables.utxo.table(), prefix, |k,v| {
+            let Some(k) = k else { return true };
+            let Some(v) = v else { return true };
+            selector(k,&v)
+        }).context("Failed to delete saved utxo")
     }
-    
+
+    //todo: better path for DB keys
+    //todo: better selectors?
     //todo: implement more clever way to check updates
-    /// Get all utxo's from api and save them to DB
-    pub async fn fetch_utxo(&self, wallet: &str) -> anyhow::Result<UtxoMultiList> {
+    //todo: implement more clever way to overwrite values (so only changed items will be updated)
+    pub async fn fetch_utxo(&self, wallet: &str, wallet_selector: impl Fn(&str, &WalletAddressData) -> bool, utxo_selector: impl Fn(&str, &UtxoData) -> bool) -> anyhow::Result<UtxoMultiList> {
         debug!("Fetching utxo's");
-        let utxo = self.get_all_utxo_from_api(AddressType::Utxo, wallet).await?;
+        let utxo = self.get_all_utxo_from_api(wallet, &wallet_selector).await?;
 
         //todo: drop utxo on error
-        let removed = self.clear_saved_utxo(wallet)?;
+        let removed = self.clear_saved_utxo(wallet, &utxo_selector)?;
         debug!("Removed {removed} utxo for {wallet}");
 
         //todo: optimize

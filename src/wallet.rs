@@ -1,6 +1,6 @@
 use bitcoin::secp256k1::SecretKey;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, clap::ValueEnum, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, clap::ValueEnum, PartialEq, Eq)]
 pub enum AddressType {
 	#[clap(name = "utxo")]
 	Utxo,

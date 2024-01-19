@@ -1,4 +1,4 @@
-use std::{fmt::Debug, path::Path, sync::Arc};
+use std::{fmt::Debug, path::Path, str::from_utf8, sync::Arc};
 
 use anyhow::Context;
 use tracing::{info, trace};
@@ -32,7 +32,21 @@ unsafe impl Sync for OwnedDbTable {}
 
 impl Database {
     pub fn open(path: impl AsRef<Path>) -> anyhow::Result<Arc<Database>> {
-        let db = rocksdb::DB::open_default(path).context("Failed to open DB")?;
+        let mut cf = if let Ok(v) = rocksdb::DB::list_cf(&rocksdb::Options::default(), &path) { v } else {
+            warn!("DB not found. Creating new one");
+            vec![]
+        };
+        debug!("Found column families: {cf:?}");
+
+        // Is it safe to have duplicates in cf list?
+        cf.push("utxo".to_owned());
+        cf.push("wallets".to_owned());
+        cf.push("addresses".to_owned());
+
+        let mut opt = rocksdb::Options::default();
+        opt.create_if_missing(true);
+        opt.create_missing_column_families(true);
+        let db = rocksdb::DB::open_cf(&opt, path, cf).context("Failed to open DB")?;
         info!("RocksDB connected");
         Ok(Arc::new(Self { db }))
     }
@@ -88,16 +102,24 @@ impl Database {
     }
 
     //todo: optimize
-    pub fn remove_where(&self, f: &DbTable, prefix: Vec<u8>, predicate: impl Fn(&[u8]) -> bool) -> anyhow::Result<usize> {
+    pub fn remove_where_raw(&self, f: &DbTable, prefix: Vec<u8>, predicate: impl Fn(&[u8], &[u8]) -> bool) -> anyhow::Result<usize> {
         let mut batch = rocksdb::WriteBatch::default();
         let mut c = 0;
-        for (k,_) in self.iterate(f, prefix).context("Failed to iterate rows for delete")? {
-            if !predicate(&k) { continue; } 
+        for (k,v) in self.iterate(f, prefix).context("Failed to iterate rows for delete")? {
+            if !predicate(&k, &v) { continue; } 
             batch.delete_cf(f, k);
             c += 1;
         }
         self.db.write(batch).context("Failed to delete rows")?;
         Ok(c)
+    }
+
+    pub fn remove_where<V: for<'a> serde::Deserialize<'a>>(&self, f: &DbTable, prefix: Vec<u8>, predicate: impl Fn(Option<&str>, Option<V>) -> bool) -> anyhow::Result<usize> {
+        self.remove_where_raw(f, prefix, |k,v| {
+            let k = from_utf8(k).ok();
+            let v = k.is_some().then(|| bincode::deserialize::<V>(v).ok()).flatten();
+            predicate(k,v)
+        })
     }
 
     pub fn contains(&self, f: &DbTable, k: impl AsRef<[u8]> + Debug) -> anyhow::Result<bool> {

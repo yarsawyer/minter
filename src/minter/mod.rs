@@ -89,6 +89,14 @@ impl Minter {
         Ok(iter)
     }
 
+    pub fn get_address(&self, wallet: &str, pub_key: &str) -> anyhow::Result<Option<WalletAddressData>> {
+        let mut key = wallet.to_owned();
+        key.push('/');
+        key.push_str(pub_key);
+
+        self.db.get(self.tables.addresses.table(), key.as_bytes()).context("Failed to get address")
+    }
+
     pub fn push_wallet(&self, id: &str, wallet: &Wallet) -> anyhow::Result<()> {
         self.db.set(self.tables.wallets.table(), id.as_bytes(), wallet)?;
 		self.push_important(format!("Created a new wallet with mnemonic: {}", &wallet.mnemonic));

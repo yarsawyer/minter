@@ -49,6 +49,8 @@ pub(crate) enum Wallet {
 	RemoveAddress(util_commands::RemoveAddress),
 	#[clap(about = "List addresses", name="addresses")]
 	ListAddresses(util_commands::ListAddresses),
+	#[clap(about = "Get private address from public")]
+	GetPrivate(util_commands::GetPrivate),
 	#[clap(about = "Send")]
 	Send(send::Send),
 //   #[clap(about = "Restore wallet")]
@@ -78,6 +80,7 @@ impl Wallet {
 			Self::RemoveAddress(args) => args.run(options, state).await,
 			Self::ListAddresses(args) => args.run(options, state).await,
 			Self::Send(args) => args.run(options, state).await,
+			Self::GetPrivate(args) => args.run(options, state).await,
 			//Self::Outputs => outputs::run(options),
 		}
 	}

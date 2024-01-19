@@ -77,3 +77,26 @@ impl ListAddresses {
     }
 }
 
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct GetPrivateOutput {
+    pub private: Option<String>,
+}
+
+#[derive(Debug, clap::Parser)]
+pub struct GetPrivate {
+    pub address: String,
+}
+
+impl GetPrivate {
+    pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+        let addr = state.get_address(&options.wallet, &self.address)?.context("Address not found")?;
+        print_json(GetPrivateOutput {
+            private: addr.private.map(|x|format!("{}", x.display_secret())),
+        }).unwrap();
+        Ok(())
+    }
+}
+
+
+

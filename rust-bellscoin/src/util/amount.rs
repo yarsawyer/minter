@@ -688,7 +688,7 @@ impl default::Default for Amount {
 
 impl fmt::Debug for Amount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Amount({:.8} BTC)", self.to_btc())
+        write!(f, "Amount({:.8} BEL)", self.to_btc())
     }
 }
 

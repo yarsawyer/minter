@@ -1,6 +1,6 @@
-use std::{sync::Arc, fmt::Display, io::{Write, Read}, str::from_utf8};
+use std::{sync::Arc, fmt::Display, io::{Write, Read}, str::{from_utf8, FromStr}};
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use itertools::Itertools;
 use tracing::{warn, error};
 
@@ -101,6 +101,30 @@ impl Minter {
         self.db.set(self.tables.wallets.table(), id.as_bytes(), wallet)?;
 		self.push_important(format!("Created a new wallet with mnemonic: {}", &wallet.mnemonic));
         Ok(())
+    }
+
+    pub fn create_wallet(&self, passphrase: String, name: String) -> anyhow::Result<Wallet> {
+        use bitcoin::secp256k1::rand::RngCore;
+
+		let mut entropy = [0; 16];
+		bitcoin::secp256k1::rand::thread_rng().fill_bytes(&mut entropy);
+
+		let mnemonic = bip39::Mnemonic::from_entropy(&entropy)?;
+        self.create_wallet_with_mnemonic(passphrase, name, mnemonic.to_string())
+    }
+    pub fn create_wallet_with_mnemonic(&self, passphrase: String, name: String, mnemonic: String) -> anyhow::Result<Wallet> {
+        if self.get_wallet(&name)?.is_some() {
+			bail!("Wallet {} already exists. Create new one with --wallet <name> flag", &name);
+		}
+		let wallet = Wallet::new(mnemonic, Some(passphrase.clone()), name.clone());
+		let mnemonic = bip39::Mnemonic::from_str(&wallet.mnemonic).context("Invalid mnemonic")?;
+
+		self.db.set(self.tables.wallets.table(), &name, &wallet).context("Failed to save wallet to database")?;
+
+		self.push_important("There is no wallet saved in DB");
+		self.push_important(format!("Created new wallet with mnemonic: {mnemonic}"));
+
+        Ok(wallet)
     }
 
     pub fn get_wallet(&self, id: &str) -> anyhow::Result<Option<Wallet>> {

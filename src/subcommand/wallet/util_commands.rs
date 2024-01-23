@@ -98,5 +98,41 @@ impl GetPrivate {
     }
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct ImportYamlOutput {
+	mnemonic: bip39::Mnemonic,
+	passphrase: Option<String>,
+}
+
+#[derive(Debug, clap::Parser)]
+pub struct ImportYaml {
+    #[arg(help = "path to legacy yaml file")]
+    pub path: String,
+}
+#[derive(Debug, serde::Deserialize)]
+struct LegacyYaml {
+    mnemonic: String,
+    passphrase: Option<String>,
+}
+
+impl ImportYaml {
+    pub async fn run(self, options: crate::subcommand::Options, state: Arc<Minter>) -> anyhow::Result<()> {
+        let f = std::fs::read_to_string(self.path).context("Can't read file")?;
+        let wallet = serde_yaml::from_str::<LegacyYaml>(&f).context("Invalid legacy yaml")?;
+        
+        let wallet = state.create_wallet_with_mnemonic(wallet.passphrase.unwrap_or_else(||"bells".to_owned()), options.wallet, wallet.mnemonic).context("Failed to import wallet")?;
+
+		print_json(ImportYamlOutput {
+			mnemonic: bip39::Mnemonic::from_str(&wallet.mnemonic).unwrap(),
+			passphrase: Some(wallet.passphrase.unwrap_or_else(||"bells".to_owned())),
+		})?;
+
+        info!("Wallet imported");
+        Ok(())
+    }
+}
+
+
+
 
 

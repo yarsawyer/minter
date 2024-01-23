@@ -51,6 +51,8 @@ pub(crate) enum Wallet {
 	ListAddresses(util_commands::ListAddresses),
 	#[clap(about = "Get private address from public")]
 	GetPrivate(util_commands::GetPrivate),
+	#[clap(about = "Import wallet", name="import")]
+	Import(util_commands::ImportYaml),
 	#[clap(about = "Send")]
 	Send(send::Send),
 //   #[clap(about = "Restore wallet")]
@@ -81,6 +83,7 @@ impl Wallet {
 			Self::ListAddresses(args) => args.run(options, state).await,
 			Self::Send(args) => args.run(options, state).await,
 			Self::GetPrivate(args) => args.run(options, state).await,
+			Self::Import(args) => args.run(options, state).await,
 			//Self::Outputs => outputs::run(options),
 		}
 	}

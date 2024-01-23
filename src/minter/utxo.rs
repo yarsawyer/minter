@@ -236,6 +236,7 @@ impl super::Minter {
         }).context("Failed to delete saved utxo")
     }
 
+    //todo: remove and set in one transaction
     //todo: better path for DB keys
     //todo: better selectors?
     //todo: implement more clever way to check updates

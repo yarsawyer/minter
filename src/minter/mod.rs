@@ -8,6 +8,7 @@ use crate::{data::{db::Database, MinterDbTables}, wallet::{Wallet, WalletAddress
 
 pub mod utxo;
 pub mod wallet;
+pub mod inscribe;
 
 pub struct Minter {
     pub db: Arc<Database>,

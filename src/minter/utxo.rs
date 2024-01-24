@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::from_utf8};
+use std::{collections::HashMap, str::{from_utf8, FromStr}};
 
 use anyhow::{bail, Context};
 use bitcoin::BlockHash;
@@ -9,13 +9,22 @@ use crate::wallet::{AddressType, WalletAddressData};
 // bincode does not support 'flatten' but we need it to access api
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UtxoData {
-    pub txid: String,
+    pub txid: bitcoin::Txid,
     pub vout: u32,
     pub status: Status,
     pub value: u64,
     pub ty: AddressType,
     #[serde(default)] pub inscription_meta: Option<InscriptionMeta>,
     #[serde(default)] pub owner: Option<String>,
+}
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct InscriptionMeta {
+    pub content_type: String,
+    pub content_length: usize,
+    pub outpoint: bitcoin::OutPoint,
+    pub genesis: bitcoin::OutPoint,
+    pub inscription_id: InscriptionId,
+    pub number: usize,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -24,7 +33,7 @@ pub struct UtxoApiData {
     pub vout: u32,
     pub status: Status,
     pub value: u64,
-    #[serde(default, flatten)] pub inscription_meta: Option<InscriptionMeta>,
+    #[serde(default, flatten)] pub inscription_meta: Option<InscriptionApiMeta>,
     #[serde(default)] pub owner: Option<String>,
 }
 
@@ -43,7 +52,7 @@ pub struct InscriptionId {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct InscriptionMeta {
+pub struct InscriptionApiMeta {
     pub content_type: String,
     pub content_length: usize,
     pub outpoint: bitcoin::Txid,
@@ -197,11 +206,18 @@ impl super::Minter {
                     .context("Api get utxo invalid json")?
                     .into_iter()
                     .map(|x| UtxoData {
-                        txid: x.txid,
+                        txid: bitcoin::Txid::from_str(&x.txid).unwrap(), //todo: remove unwrap
                         vout: x.vout,
                         status: x.status,
                         value: x.value,
-                        inscription_meta: x.inscription_meta,
+                        inscription_meta: x.inscription_meta.map(|x| InscriptionMeta { 
+                            content_type: x.content_type, 
+                            content_length: x.content_length, 
+                            outpoint: bitcoin::OutPoint { txid: x.outpoint, vout: 0 }, 
+                            genesis: bitcoin::OutPoint { txid: x.genesis, vout: 0 }, 
+                            inscription_id: x.inscription_id, 
+                            number: x.number,
+                        }),
                         owner: x.owner,
                         ty,
                     })
@@ -255,7 +271,7 @@ impl super::Minter {
                 key.push('/');
                 key.push_str(addr);
                 key.push('/');
-                key.push_str(&x.txid);
+                key.push_str(&x.txid.to_string());
                 key.push(':');
                 key.push_str(&x.vout.to_string());
                 (key.into_bytes(), x)
@@ -298,7 +314,7 @@ impl super::Minter {
 
         trace!("Collecting utxo's for transaction");
         let utxo = self.gather_utxo(wallet, AddressType::Utxo, amount.to_sat()).await.context("Failed to retrieve available utxo's for transaction")?;
-
+        
         
 
         dbg!(utxo);

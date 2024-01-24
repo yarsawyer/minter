@@ -43,7 +43,7 @@ impl ListUtxo {
             utxo: utxo
                 .iter()
                 .map(|(_addr,x)| OutputUtxoData {
-                    txid: x.txid.clone(),
+                    txid: x.txid.to_string(),
                     vout: x.vout,
                     confirmed: x.status.confirmed,
                     value: bitcoin::Amount::from_sat(x.value).to_btc(),
